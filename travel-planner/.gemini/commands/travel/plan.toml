@@ -1,0 +1,7 @@
+description = "여행 문서만 생성합니다."
+prompt = """
+@{prompts/travel-plan-only.md}
+
+사용자 요청:
+{{args}}
+"""

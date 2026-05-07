@@ -1,0 +1,7 @@
+description = "여행 문서와 인터랙티브 웹페이지를 한 번에 생성합니다."
+prompt = """
+@{prompts/travel-full.md}
+
+사용자 요청:
+{{args}}
+"""

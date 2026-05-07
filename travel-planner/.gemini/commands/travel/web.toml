@@ -1,0 +1,7 @@
+description = "기존 _workspace 문서를 바탕으로 docs 웹페이지를 생성합니다."
+prompt = """
+@{prompts/travel-web-only.md}
+
+사용자 요청:
+{{args}}
+"""

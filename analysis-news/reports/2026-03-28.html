@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>생성형AI 뉴스 분석 · 2026-03-28</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+      background: #f5f6fa;
+      color: #1a1a2e;
+      padding: 32px 16px;
+    }
+    .container { max-width: 860px; margin: 0 auto; }
+
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+      color: #fff;
+      border-radius: 16px;
+      padding: 36px 40px;
+      margin-bottom: 28px;
+    }
+    header h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 8px; }
+    header .meta { font-size: 0.88rem; opacity: 0.65; letter-spacing: 0.03em; }
+    header .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.82rem;
+      margin-top: 14px;
+    }
+
+    .notice {
+      background: #fff8e1;
+      border-left: 4px solid #f9a825;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      margin-bottom: 24px;
+      color: #5a4a00;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #0f3460;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card h2 .num {
+      background: #0f3460;
+      color: #fff;
+      border-radius: 6px;
+      padding: 2px 9px;
+      font-size: 0.78rem;
+    }
+
+    /* 키워드 */
+    .keyword-list { list-style: none; }
+    .keyword-list li {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 0.93rem;
+      line-height: 1.6;
+    }
+    .keyword-list li:last-child { border-bottom: none; }
+    .keyword-list .rank {
+      min-width: 28px;
+      font-weight: 700;
+      color: #0f3460;
+      font-size: 0.85rem;
+    }
+    .keyword-list .kw {
+      min-width: 110px;
+      font-weight: 600;
+      color: #1a1a2e;
+    }
+    .keyword-list .desc { color: #555; font-size: 0.88rem; }
+
+    /* 트렌드 */
+    .trend-list { list-style: none; counter-reset: trend; }
+    .trend-list li {
+      counter-increment: trend;
+      padding: 12px 0 12px 36px;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 0.93rem;
+      line-height: 1.75;
+      color: #333;
+      position: relative;
+    }
+    .trend-list li:last-child { border-bottom: none; }
+    .trend-list li::before {
+      content: counter(trend);
+      position: absolute;
+      left: 0;
+      top: 14px;
+      background: #e8f0fe;
+      color: #0f3460;
+      font-weight: 700;
+      font-size: 0.78rem;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 감성 비율 */
+    .sentiment-bars { display: flex; flex-direction: column; gap: 12px; }
+    .sentiment-row { display: flex; align-items: center; gap: 12px; font-size: 0.9rem; }
+    .sentiment-row .label { min-width: 40px; font-weight: 600; }
+    .bar-wrap { flex: 1; background: #f0f0f0; border-radius: 99px; height: 18px; overflow: hidden; }
+    .bar { height: 100%; border-radius: 99px; transition: width 0.5s; }
+    .bar.pos { background: #34a853; }
+    .bar.neu { background: #9aa0a6; }
+    .bar.neg { background: #ea4335; }
+    .sentiment-row .pct { min-width: 42px; font-weight: 700; text-align: right; }
+    .sentiment-note { font-size: 0.83rem; color: #777; margin-top: 14px; line-height: 1.6; }
+
+    /* 뉴스 vs 블로그 */
+    .vs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 600px) { .vs-grid { grid-template-columns: 1fr; } }
+    .vs-box { background: #f8f9ff; border-radius: 10px; padding: 16px 18px; }
+    .vs-box h3 { font-size: 0.88rem; font-weight: 700; color: #0f3460; margin-bottom: 10px; }
+    .vs-box ul { list-style: none; }
+    .vs-box ul li {
+      font-size: 0.85rem;
+      color: #444;
+      line-height: 1.65;
+      padding: 4px 0;
+      padding-left: 14px;
+      position: relative;
+    }
+    .vs-box ul li::before { content: "·"; position: absolute; left: 2px; color: #0f3460; font-weight: 700; }
+    .vs-summary {
+      margin-top: 14px;
+      background: #e8f0fe;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.87rem;
+      color: #1a1a2e;
+      line-height: 1.7;
+    }
+
+    /* 인사이트 */
+    .insight { margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid #f0f0f0; }
+    .insight:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+    .insight-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #0f3460;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .insight-title .tag {
+      background: #0f3460;
+      color: #fff;
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 99px;
+    }
+    .insight p { font-size: 0.9rem; color: #444; line-height: 1.75; }
+
+    footer {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-top: 32px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>생성형AI 뉴스·블로그 분석 보고서</h1>
+    <div class="meta">수집일: 2026-03-28 &nbsp;|&nbsp; 총 200건 (뉴스 100 / 블로그 100)</div>
+    <div class="badge">검색어: "생성형AI" · 네이버 검색 API</div>
+  </header>
+
+  <div class="notice">
+    <strong>데이터 품질 노트</strong><br>
+    블로그 100건 중 약 85건은 패션·가전·생활용품 쇼핑 블로그로, 생성형AI와 무관한 스팸성 게시물입니다.
+    실질적 AI 관련 블로그는 약 15건으로, 아래 분석은 뉴스 100건 + 유효 블로그 15건 기준으로 작성했습니다.
+  </div>
+
+  <!-- 1. 키워드 -->
+  <div class="card">
+    <h2><span class="num">1</span> 주요 키워드 TOP 10</h2>
+    <ul class="keyword-list">
+      <li><span class="rank">01</span><span class="kw">AI 교육</span><span class="desc">영남이공대, 경과원, 부산교육청, 경남정보대 등 공공기관의 생성형 AI 교육 확대 기사 집중</span></li>
+      <li><span class="rank">02</span><span class="kw">AI 보안</span><span class="desc">RSAC 2026 핵심 의제로 AI 보안 위협·DLP·거버넌스 부상. 솔트웨어, 한화비전, Cisco 등 보안 기업 활발한 활동</span></li>
+      <li><span class="rank">03</span><span class="kw">AI 금융</span><span class="desc">신한·KB·하나 등 주요 은행이 생성형 AI 기반 여신심사·상담 에이전트 실전 도입</span></li>
+      <li><span class="rank">04</span><span class="kw">터보퀀트</span><span class="desc">구글의 AI 메모리 압축 기술. 반도체 수요 위기론과 역설적 수요 증가론이 충돌 중인 핵심 이슈</span></li>
+      <li><span class="rank">05</span><span class="kw">AI 윤리·규제</span><span class="desc">독립운동가 조롱 AI 영상, 딥페이크 공무원 사건, AI 딸깍 출판물, 가짜 AI 의사 등 부작용 잇따라</span></li>
+      <li><span class="rank">06</span><span class="kw">공공·의료 AI</span><span class="desc">경남 AI 복지플랫폼, 강동성심병원, 희귀질환 유전자 검사 등 공공 서비스 영역으로 확산</span></li>
+      <li><span class="rank">07</span><span class="kw">생성형AI 도구</span><span class="desc">ChatGPT·Claude·Gemini·미드저니 등 툴 비교·활용법 콘텐츠가 블로그 중심으로 활발히 공유</span></li>
+      <li><span class="rank">08</span><span class="kw">AI 채용·일자리</span><span class="desc">"신입 채용문 더 좁아졌다", AI가 보고서·심사·법률 업무를 대체하며 직무 재편 가속</span></li>
+      <li><span class="rank">09</span><span class="kw">구글</span><span class="desc">터보퀀트, 서치 라이브 한국 출시, AI 임원 영입 등 공격적 AI 행보 유지</span></li>
+      <li><span class="rank">10</span><span class="kw">오픈AI·앤트로픽</span><span class="desc">소라 철수, 성인모드 보류, Claude 서비스 급성장 등 플랫폼 경쟁 및 전략 변화 지속</span></li>
+    </ul>
+  </div>
+
+  <!-- 2. 트렌드 -->
+  <div class="card">
+    <h2><span class="num">2</span> 전체 트렌드 요약</h2>
+    <ol class="trend-list">
+      <li>생성형 AI는 2026년 현재 기업·금융·의료·공공 전 영역으로 확산되고 있으며, 신한·KB·하나은행이 여신심사·상담 업무에 생성형 AI를 실전 도입하는 등 금융권이 'AI Native' 전환의 선도 분야로 부상하고 있다.</li>
+      <li>교육 분야에서는 공공기관(경과원, 영남이공대, 부산교육청)이 생성형 AI 교육을 전면 확대하며 AI 리터러시 격차 해소에 나서고 있으나, 동시에 독립운동가 조롱 AI 영상, 딥페이크, 가짜 출판물 등 부작용이 잇따라 발생하며 규제 정비의 시급성이 높아지고 있다.</li>
+      <li>구글 터보퀀트 등 AI 효율화 기술이 연속 공개되며 메모리 반도체 위기론이 시장을 뒤흔들고 있으나, AI 사용량 증가로 인한 제번스 역설이 실제 수요를 오히려 확대할 것이라는 반론도 팽팽하다.</li>
+      <li>RSAC 2026 등 글로벌 보안 컨퍼런스에서 AI 에이전트 보안·거버넌스가 핵심 의제로 부상하며, AI 도입 속도만큼 보안 리스크 관리가 중요한 경영 과제로 격상됐다.</li>
+      <li>블로그 데이터에서는 스팸성 쇼핑 콘텐츠 비중이 높아 정보 노이즈가 심각하며, 유효한 AI 블로그는 주로 툴 비교·GEO 최적화·의료 활용 사례 등 실용적 콘텐츠에 집중되어 있다.</li>
+    </ol>
+  </div>
+
+  <!-- 3. 감성 -->
+  <div class="card">
+    <h2><span class="num">3</span> 긍정 / 부정 / 중립 비율</h2>
+    <div class="sentiment-bars">
+      <div class="sentiment-row">
+        <span class="label">긍정</span>
+        <div class="bar-wrap"><div class="bar pos" style="width:40%"></div></div>
+        <span class="pct">40%</span>
+      </div>
+      <div class="sentiment-row">
+        <span class="label">중립</span>
+        <div class="bar-wrap"><div class="bar neu" style="width:40%"></div></div>
+        <span class="pct">40%</span>
+      </div>
+      <div class="sentiment-row">
+        <span class="label">부정</span>
+        <div class="bar-wrap"><div class="bar neg" style="width:20%"></div></div>
+        <span class="pct">20%</span>
+      </div>
+    </div>
+    <div class="sentiment-note">
+      긍정: AI 도입 성과, 교육 확대, 신기술 출시, 의료 혁신 등 &nbsp;|&nbsp;
+      중립: 현황 보도, MOU·위촉식, 기업 동향 단신 &nbsp;|&nbsp;
+      부정: AI 딥페이크, 독립운동가 조롱, 채용 감소, 보안 위협, 가짜 AI 의사 등<br><br>
+      <strong>특이점:</strong> "AI 에이전트" 검색 대비 윤리·저작권·딥페이크 관련 기사 비중이 상대적으로 더 높음.
+      생성형 AI의 콘텐츠 생성 능력이 악용 사례와 직결되기 때문.
+    </div>
+  </div>
+
+  <!-- 4. 뉴스 vs 블로그 -->
+  <div class="card">
+    <h2><span class="num">4</span> 뉴스 vs 블로그 관점 차이</h2>
+    <div class="vs-grid">
+      <div class="vs-box">
+        <h3>뉴스</h3>
+        <ul>
+          <li>AI 교육, AI 금융, AI 보안, 터보퀀트, AI 윤리 중심</li>
+          <li>기관·기업 도입 발표 및 정책 동향 팩트 보도 위주</li>
+          <li>생성형 AI 부작용(딥페이크, 조롱 콘텐츠, 가짜 출판) 경계 기사 두드러짐</li>
+          <li>글로벌 빅테크 전략 변화를 신속하게 전달</li>
+        </ul>
+      </div>
+      <div class="vs-box">
+        <h3>블로그 (유효 15건)</h3>
+        <ul>
+          <li>AI 툴 비교, GEO 최적화, 의료 AI 활용 사례 위주</li>
+          <li>사이버보안 주식·투자 분석 콘텐츠 포함</li>
+          <li>나머지 85%는 패션·가전 쇼핑 블로그 (스팸)</li>
+          <li>"생성형AI" 블로그 검색 품질 현저히 낮음</li>
+        </ul>
+      </div>
+    </div>
+    <div class="vs-summary">
+      <strong>뉴스</strong> = 정보 품질 높고 산업 전반 트렌드 파악에 적합 &nbsp;|&nbsp;
+      <strong>블로그</strong> = 스팸 비율 과다로 단독 분석 한계. 추가 필터링 필수
+    </div>
+  </div>
+
+  <!-- 5. 인사이트 -->
+  <div class="card">
+    <h2><span class="num">5</span> 주목할 인사이트 3가지</h2>
+
+    <div class="insight">
+      <div class="insight-title"><span class="tag">인사이트 1</span> 생성형 AI 부작용이 '법·제도' 공백을 드러내는 중</div>
+      <p>독립운동가 조롱 AI 영상(사자 모욕 처벌 공백), AI 딸깍 출판물(도서관법 개정 추진), 딥페이크 공무원 사건, 가짜 AI 의사 주의보 등 다양한 부작용이 동시에 터지며 기술 속도 대비 법·제도 정비가 현저히 뒤처짐을 보여준다. 생성형 AI 규제 공백이 사회 문제로 직결되는 속도가 빠르게 증가 중이다.</p>
+    </div>
+
+    <div class="insight">
+      <div class="insight-title"><span class="tag">인사이트 2</span> 공공기관이 생성형 AI 교육의 주요 드라이버로 부상</div>
+      <p>경과원(강사 130명), 영남이공대(전 구성원 전면 도입), 부산교육청(수업 설계 사례집), 과기정통부(공무원 업스킬), 경남도(AI 복지플랫폼) 등 중앙·지방정부와 공공기관이 생성형 AI 교육·도입의 주도권을 쥐고 있다. 민간보다 공공 부문에서 오히려 빠르게 전개되고 있다는 점은 "AI 에이전트" 검색 결과와 비교되는 차별적 시그널이다.</p>
+    </div>
+
+    <div class="insight">
+      <div class="insight-title"><span class="tag">인사이트 3</span> 블로그 데이터 노이즈 자체가 중요한 인사이트</div>
+      <p>"생성형AI" 키워드로 수집한 블로그 100건 중 85건이 패션·가전 스팸이라는 사실은, 네이버 블로그 생태계에서 해당 키워드가 SEO 어뷰징에 활용되고 있음을 시사한다. 생성형 AI 관련 콘텐츠를 블로그에서 탐색할 때는 단순 키워드 검색보다 제목·카테고리 기반 필터링이 필수적이다.</p>
+    </div>
+  </div>
+
+  <footer>Generated by Claude · 2026-03-28</footer>
+</div>
+</body>
+</html>

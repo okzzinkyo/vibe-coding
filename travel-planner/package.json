@@ -1,0 +1,9 @@
+{
+  "name": "gemini-travel-planner-harness",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Gemini CLI travel planner harness with interactive website output",
+  "scripts": {
+    "preview": "node scripts/preview-site.mjs"
+  }
+}

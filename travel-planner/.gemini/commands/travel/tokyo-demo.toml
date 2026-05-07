@@ -1,0 +1,6 @@
+description = "도쿄 6박 7일 문화 여행 데모를 실행합니다."
+prompt = """
+@{prompts/travel-full.md}
+
+@{prompts/demo-tokyo-culture.md}
+"""

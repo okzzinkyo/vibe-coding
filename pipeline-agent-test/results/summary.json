@@ -1,0 +1,17 @@
+[
+    {
+        "Method":"DA-RAG (Ours)",
+        "Pass@1 (Accuracy)":0.67,
+        "Executability":0.67
+    },
+    {
+        "Method":"Vanilla RAG (BM25)",
+        "Pass@1 (Accuracy)":0.515,
+        "Executability":0.435
+    },
+    {
+        "Method":"Zero-shot",
+        "Pass@1 (Accuracy)":0.33,
+        "Executability":0.33
+    }
+]
