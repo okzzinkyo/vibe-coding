@@ -42,6 +42,7 @@ export default function RegisterPage() {
     if (error) {
       toast.error('회원가입 실패: ' + error.message)
     } else {
+      await supabase.auth.signOut()
       toast.success('회원가입 완료! 로그인해주세요.')
       router.push('/login')
     }

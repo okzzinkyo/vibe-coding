@@ -1,14 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { Pencil, Trash2 } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Pencil, Trash2, Users } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import type { Event } from '@/types/database'
+import type { Event, Profile } from '@/types/database'
 import EventFormModal from './event-form-modal'
 
 const COLOR_LABEL: Record<string, string> = {
@@ -30,10 +31,23 @@ interface EventDetailModalProps {
 
 export default function EventDetailModal({ event, isAdmin, open, onClose, onUpdated }: EventDetailModalProps) {
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [participants, setParticipants] = useState<Profile[]>([])
+
+  useEffect(() => {
+    if (!open) return
+    const supabase = createClient()
+    supabase
+      .from('event_participants')
+      .select('profiles(*)')
+      .eq('event_id', event.id)
+      .then(({ data }) => {
+        if (data) setParticipants(data.map((d: { profiles: Profile }) => d.profiles))
+      })
+  }, [open, event.id])
 
   const handleDelete = async () => {
-    if (!confirm('이 일정을 삭제하시겠습니까?')) return
     setDeleting(true)
     const supabase = createClient()
     const { error } = await supabase.from('events').delete().eq('id', event.id)
@@ -41,6 +55,7 @@ export default function EventDetailModal({ event, isAdmin, open, onClose, onUpda
       toast.error('삭제 실패: ' + error.message)
     } else {
       toast.success('일정이 삭제되었습니다')
+      setDeleteConfirmOpen(false)
       onUpdated()
     }
     setDeleting(false)
@@ -73,6 +88,30 @@ export default function EventDetailModal({ event, isAdmin, open, onClose, onUpda
                 <p className="text-sm whitespace-pre-wrap">{event.description}</p>
               </div>
             )}
+
+            <div>
+              <div className="flex items-center gap-1.5 mb-2">
+                <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                <p className="text-xs font-medium text-muted-foreground">참여자 ({participants.length}명)</p>
+              </div>
+              {participants.length === 0 ? (
+                <p className="text-xs text-muted-foreground">참여자가 없습니다</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {participants.map(p => (
+                    <div key={p.id} className="flex items-center gap-1.5 bg-gray-50 rounded-full px-2.5 py-1">
+                      <Avatar className="w-5 h-5">
+                        <AvatarFallback className="text-[10px] bg-blue-100 text-blue-700">
+                          {p.name.slice(0, 1)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs font-medium">{p.name}</span>
+                      {p.position && <span className="text-xs text-muted-foreground">{p.position}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {isAdmin && (
@@ -81,12 +120,31 @@ export default function EventDetailModal({ event, isAdmin, open, onClose, onUpda
                 <Pencil className="w-3.5 h-3.5 mr-1.5" />
                 수정
               </Button>
-              <Button variant="destructive" size="sm" onClick={handleDelete} disabled={deleting} className="flex-1">
+              <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmOpen(true)} className="flex-1">
                 <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                {deleting ? '삭제 중...' : '삭제'}
+                삭제
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>일정 삭제</DialogTitle>
+            <DialogDescription>
+              <span className="font-medium text-foreground">{event.title}</span> 일정을 삭제하시겠습니까?
+              <br />
+              삭제된 일정은 복구할 수 없습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>취소</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? '삭제 중...' : '삭제'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

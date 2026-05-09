@@ -11,6 +11,8 @@ export interface Database {
           email: string
           name: string
           role: UserRole
+          position: string | null
+          phone: string | null
           avatar_url: string | null
           created_at: string
         }
@@ -19,6 +21,8 @@ export interface Database {
           email: string
           name: string
           role?: UserRole
+          position?: string | null
+          phone?: string | null
           avatar_url?: string | null
           created_at?: string
         }
@@ -27,6 +31,8 @@ export interface Database {
           email?: string
           name?: string
           role?: UserRole
+          position?: string | null
+          phone?: string | null
           avatar_url?: string | null
         }
         Relationships: []
@@ -87,6 +93,22 @@ export interface Database {
         }
         Relationships: []
       }
+      event_participants: {
+        Row: {
+          id: string
+          event_id: string
+          profile_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          profile_id: string
+          created_at?: string
+        }
+        Update: never
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -98,3 +120,4 @@ export interface Database {
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Event = Database['public']['Tables']['events']['Row']
 export type Announcement = Database['public']['Tables']['announcements']['Row']
+export type EventParticipant = Database['public']['Tables']['event_participants']['Row']

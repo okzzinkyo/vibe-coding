@@ -4,6 +4,8 @@ create table public.profiles (
   email text not null,
   name text not null,
   role text not null default 'member' check (role in ('admin', 'member')),
+  position text,
+  phone text,
   avatar_url text,
   created_at timestamptz default now() not null
 );
@@ -30,10 +32,20 @@ create table public.announcements (
   created_at timestamptz default now() not null
 );
 
+-- event_participants 테이블
+create table public.event_participants (
+  id uuid default gen_random_uuid() primary key,
+  event_id uuid references public.events(id) on delete cascade not null,
+  profile_id uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now() not null,
+  unique(event_id, profile_id)
+);
+
 -- RLS 활성화
 alter table public.profiles enable row level security;
 alter table public.events enable row level security;
 alter table public.announcements enable row level security;
+alter table public.event_participants enable row level security;
 
 -- profiles 정책
 create policy "로그인한 사용자는 프로필 조회 가능" on public.profiles
@@ -61,6 +73,15 @@ create policy "로그인한 사용자는 공지 조회 가능" on public.announc
   for select using (auth.role() = 'authenticated');
 
 create policy "관리자만 공지 등록/수정/삭제 가능" on public.announcements
+  for all using (
+    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+  );
+
+-- event_participants 정책
+create policy "로그인한 사용자는 참여자 조회 가능" on public.event_participants
+  for select using (auth.role() = 'authenticated');
+
+create policy "관리자만 참여자 등록/삭제 가능" on public.event_participants
   for all using (
     exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
   );
