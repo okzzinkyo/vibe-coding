@@ -16,7 +16,11 @@ export default function LoginPage() {
     setLoading(true)
 
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({ email, password })
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: window.location.origin },
+      })
       if (error) setError(error.message)
       else setSuccess('인증 이메일을 발송했습니다. 이메일을 확인해주세요.')
     } else {
@@ -28,7 +32,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 w-full max-w-md p-8">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Lab Inventory</h1>
