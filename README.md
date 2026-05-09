@@ -15,6 +15,7 @@
 | [making-slider](./making-slider/) | 이미지 묶음을 웹 슬라이더 HTML로 변환하는 Gemini CLI 스킬 실습 | Gemini CLI, HTML | 완료 |
 | [pipeline-agent-test](./pipeline-agent-test/) | 논문 작성 3-에이전트 파이프라인 실험 — researcher → executor → critic 순서로 협업 | Gemini CLI, Python | 실험 완료 |
 | [single-agent-test](./single-agent-test/) | 논문 작성 단일 에이전트 실험 — pipeline-agent-test의 비교 베이스라인 | Gemini CLI, Python | 실험 완료 |
+| [lab-inventory](./lab-inventory/) | 연구실 물품 재고 관리 서비스 — 물품 CRUD, 카테고리 관리, 사진/파일 첨부, 엑셀 다운로드 | React, Vite, TypeScript, Tailwind CSS v4, Supabase, Vercel | 완료 |
 
 ---
 

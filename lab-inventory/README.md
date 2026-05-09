@@ -2,7 +2,71 @@
 
 연구실 물품 재고 관리 서비스
 
-**스택:** React + Vite + TypeScript + Tailwind CSS v4 + Supabase + Vercel
+**스택:** React 19 + Vite + TypeScript + Tailwind CSS v4 + Supabase + Vercel
+
+---
+
+## 기능
+
+**인증**
+- 이메일/비밀번호 로그인
+
+**물품 관리**
+- 물품 목록 테이블 조회
+- 물품명 검색 (부분 일치)
+- 카테고리 필터
+- 물품 추가 / 수정 / 삭제 (삭제 확인 모달 포함)
+- 수량 0개일 때 빨간색 강조
+
+**상세 보기**
+- 물품명 클릭 시 하단 바텀시트로 상세 정보 표시
+- 바텀시트에서 사진, 설명, 첨부파일 확인 및 수정/삭제 가능
+
+**카테고리 관리**
+- 카테고리 추가 / 삭제 (모달)
+- 중복 카테고리 입력 방지
+
+**파일 첨부**
+- 사진 업로드 (Supabase Storage: `item-images` 버킷)
+- 파일 첨부 (Supabase Storage: `item-files` 버킷)
+
+**내보내기**
+- 전체 재고 엑셀 다운로드 (물품명, 카테고리, 수량, 설명, 최종 수정일)
+
+---
+
+## DB 스키마
+
+### `categories`
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| `id` | uuid | PK, 자동 생성 |
+| `name` | text (unique) | 카테고리 이름 |
+| `created_at` | timestamptz | 생성일 |
+
+### `items`
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| `id` | uuid | PK, 자동 생성 |
+| `name` | text | 물품명 |
+| `category` | text | 카테고리 이름 |
+| `quantity` | integer | 수량 |
+| `description` | text | 설명 (nullable) |
+| `image_url` | text | 사진 URL (nullable) |
+| `file_urls` | text[] | 첨부파일 URL 배열 (nullable) |
+| `created_at` | timestamptz | 생성일 |
+| `updated_at` | timestamptz | 최종 수정일 |
+
+RLS 활성화 — 로그인한 사용자만 읽기/쓰기 가능
+
+### Storage 버킷
+
+| 버킷 | 용도 |
+|------|------|
+| `item-images` | 물품 사진 (public read) |
+| `item-files` | 물품 첨부파일 (public read) |
 
 ---
 
@@ -34,9 +98,10 @@ Supabase 대시보드 → 왼쪽 메뉴 **SQL Editor** → **New query**
 `supabase-setup.sql` 파일 내용을 전체 복사해서 붙여넣고 **Run** 클릭
 
 > 이 SQL은 다음을 생성합니다:
+> - `categories` 테이블 (카테고리 목록)
 > - `items` 테이블 (물품 정보)
 > - Row Level Security 정책 (로그인한 사용자만 접근)
-> - Storage 버킷 `item-images`, `item-files`
+> - Storage 버킷 `item-images`, `item-files` (public read)
 
 ---
 
@@ -103,13 +168,3 @@ git push -u origin main
 4. **Deploy** 클릭
 
 이후 `main` 브랜치에 push할 때마다 자동 배포됩니다.
-
----
-
-## 기능
-
-- 이메일/비밀번호 로그인
-- 물품 목록 조회 및 검색
-- 카테고리 필터
-- 물품 추가 / 수정 / 삭제
-- 사진 및 파일 첨부 (Supabase Storage)
