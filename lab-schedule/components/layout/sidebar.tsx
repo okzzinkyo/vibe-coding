@@ -1,8 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Calendar, Megaphone, Users, LogOut, FlaskConical } from 'lucide-react'
+import { Calendar, Megaphone, Users, LogOut, FlaskConical, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -21,8 +22,10 @@ interface SidebarProps {
 export default function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const [loggingOut, setLoggingOut] = useState(false)
 
   const handleLogout = async () => {
+    setLoggingOut(true)
     const supabase = createClient()
     await supabase.auth.signOut()
     toast.success('로그아웃 되었습니다')
@@ -69,10 +72,11 @@ export default function Sidebar({ profile }: SidebarProps) {
         </div>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
+          disabled={loggingOut}
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50 disabled:pointer-events-none"
         >
-          <LogOut className="w-4 h-4" />
-          로그아웃
+          {loggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+          {loggingOut ? '로그아웃 중...' : '로그아웃'}
         </button>
       </div>
     </aside>

@@ -131,7 +131,7 @@ export default function EventFormModal({ open, onClose, onSaved, defaultValues }
           <DialogDescription className="sr-only">일정 정보를 입력하세요</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2 min-w-0 overflow-hidden">
           <div className="space-y-1.5">
             <Label>제목</Label>
             <Input placeholder="일정 제목" {...register('title')} />
@@ -172,7 +172,7 @@ export default function EventFormModal({ open, onClose, onSaved, defaultValues }
 
           <div className="space-y-1.5">
             <Label>설명 (선택)</Label>
-            <Textarea placeholder="일정에 대한 설명..." rows={3} {...register('description')} />
+            <Textarea placeholder="일정에 대한 설명..." rows={3} className="resize-none" {...register('description')} />
           </div>
 
           <div className="space-y-1.5">

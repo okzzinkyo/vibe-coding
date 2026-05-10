@@ -145,14 +145,14 @@ export default function AnnouncementsPage() {
             <DialogTitle>{editing ? '공지사항 수정' : '공지사항 작성'}</DialogTitle>
             <DialogDescription className="sr-only">공지사항 내용을 입력하세요</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2 min-w-0 overflow-hidden">
             <div className="space-y-1.5">
               <Label>제목</Label>
               <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="공지 제목" />
             </div>
             <div className="space-y-1.5">
               <Label>내용</Label>
-              <Textarea value={content} onChange={e => setContent(e.target.value)} rows={5} placeholder="공지 내용..." />
+              <Textarea value={content} onChange={e => setContent(e.target.value)} rows={5} placeholder="공지 내용..." className="resize-none" />
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
               <input

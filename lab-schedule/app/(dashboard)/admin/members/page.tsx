@@ -217,7 +217,7 @@ export default function MembersPage() {
             <DialogTitle>{editTarget?.name} 정보 수정</DialogTitle>
             <DialogDescription className="sr-only">직책과 연락처를 수정합니다</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2 min-w-0 overflow-hidden">
             <div className="space-y-1.5">
               <Label>직책/역할</Label>
               <Input
