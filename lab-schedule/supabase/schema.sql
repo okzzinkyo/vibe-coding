@@ -104,3 +104,7 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- 반복 일정 지원 마이그레이션
+-- alter table public.events add column recurrence_group_id uuid;
+-- alter table public.events add column recurrence_rule jsonb;

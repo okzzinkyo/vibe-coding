@@ -2,6 +2,13 @@ export type UserRole = 'admin' | 'member'
 
 export type EventColor = 'blue' | 'green' | 'red' | 'yellow' | 'purple' | 'orange'
 
+export interface RecurrenceRule {
+  days: number[]       // 0=일, 1=월, ..., 6=토
+  end_type: 'date' | 'count'
+  end_date?: string    // 'YYYY-MM-DD', end_type='date' 일 때
+  end_count?: number   // end_type='count' 일 때
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -47,6 +54,8 @@ export interface Database {
           color: EventColor
           created_by: string
           created_at: string
+          recurrence_group_id: string | null
+          recurrence_rule: RecurrenceRule | null
         }
         Insert: {
           id?: string
@@ -57,6 +66,8 @@ export interface Database {
           color?: EventColor
           created_by: string
           created_at?: string
+          recurrence_group_id?: string | null
+          recurrence_rule?: RecurrenceRule | null
         }
         Update: {
           id?: string
@@ -65,6 +76,8 @@ export interface Database {
           start_at?: string
           end_at?: string
           color?: EventColor
+          recurrence_group_id?: string | null
+          recurrence_rule?: RecurrenceRule | null
         }
         Relationships: []
       }

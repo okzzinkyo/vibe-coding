@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar'
 import { format, parse, startOfWeek, getDay } from 'date-fns'
 import { ko } from 'date-fns/locale'
+import { Repeat } from 'lucide-react'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import type { Event } from '@/types/database'
 import EventDetailModal from './event-detail-modal'
@@ -37,6 +38,17 @@ interface CalendarViewProps {
   events: Event[]
   isAdmin: boolean
   onEventUpdated: () => void
+}
+
+function CustomEvent({ event }: { event: CalendarEvent }) {
+  return (
+    <div className="flex items-center gap-0.5 overflow-hidden">
+      {event.resource.recurrence_group_id && (
+        <Repeat className="w-2.5 h-2.5 shrink-0 opacity-80" />
+      )}
+      <span className="truncate">{event.title}</span>
+    </div>
+  )
 }
 
 export default function CalendarView({ events, isAdmin, onEventUpdated }: CalendarViewProps) {
@@ -87,6 +99,7 @@ export default function CalendarView({ events, isAdmin, onEventUpdated }: Calend
           culture="ko"
           eventPropGetter={eventStyleGetter}
           onSelectEvent={e => setSelectedEvent(e.resource)}
+          components={{ event: CustomEvent }}
           style={{ fontFamily: 'inherit' }}
         />
       </div>
