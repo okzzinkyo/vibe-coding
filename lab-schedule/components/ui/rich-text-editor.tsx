@@ -15,6 +15,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
   const editor = useEditor({
     extensions: [StarterKit],
     content: value,
+    immediatelyRender: false,
     editorProps: {
       attributes: {
         class: 'rich-text min-h-[120px] px-3 py-2 text-sm focus:outline-none',
