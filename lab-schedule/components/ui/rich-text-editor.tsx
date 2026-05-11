@@ -97,7 +97,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
         </select>
       </div>
       <div className="relative">
-        {editor.isEmpty && placeholder && (
+        {editor.isEmpty && !editor.isActive('bulletList') && !editor.isActive('orderedList') && placeholder && (
           <p className="pointer-events-none absolute left-3 top-2 text-sm text-muted-foreground">
             {placeholder}
           </p>
