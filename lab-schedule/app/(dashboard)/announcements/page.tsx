@@ -22,6 +22,7 @@ export default function AnnouncementsPage() {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [pinned, setPinned] = useState(false)
+  const [viewTarget, setViewTarget] = useState<Announcement | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -116,7 +117,11 @@ export default function AnnouncementsPage() {
           </div>
         ) : (
           announcements.map(a => (
-            <div key={a.id} className="bg-white rounded-xl border p-5">
+            <div
+              key={a.id}
+              className="bg-white rounded-xl border p-5 cursor-pointer hover:border-gray-300 transition-colors"
+              onClick={() => setViewTarget(a)}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1.5">
@@ -124,7 +129,7 @@ export default function AnnouncementsPage() {
                     <h3 className="font-semibold text-base">{a.title}</h3>
                   </div>
                   <div
-                    className="rich-text text-sm text-gray-600"
+                    className="rich-text text-sm text-gray-600 line-clamp-2"
                     dangerouslySetInnerHTML={{ __html: a.content }}
                   />
                   <p className="text-xs text-muted-foreground mt-3">
@@ -132,7 +137,7 @@ export default function AnnouncementsPage() {
                   </p>
                 </div>
                 {isAdmin && (
-                  <div className="flex gap-1.5 shrink-0">
+                  <div className="flex gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(a)}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
@@ -146,6 +151,35 @@ export default function AnnouncementsPage() {
           ))
         )}
       </div>
+
+      {/* 상세보기 모달 */}
+      <Dialog open={!!viewTarget} onOpenChange={() => setViewTarget(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 pr-6">
+              {viewTarget?.pinned && <Pin className="w-4 h-4 text-blue-500 shrink-0" />}
+              {viewTarget?.title}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              {viewTarget && format(new Date(viewTarget.created_at), 'yyyy년 M월 d일 HH:mm', { locale: ko })}
+            </DialogDescription>
+          </DialogHeader>
+          <div
+            className="rich-text text-sm text-gray-700 max-h-96 overflow-y-auto py-2"
+            dangerouslySetInnerHTML={{ __html: viewTarget?.content ?? '' }}
+          />
+          {isAdmin && (
+            <DialogFooter className="gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setViewTarget(null); openEdit(viewTarget!) }}>
+                <Pencil className="w-3.5 h-3.5 mr-1.5" />수정
+              </Button>
+              <Button variant="destructive" size="sm" onClick={() => { setViewTarget(null); setDeleteTarget(viewTarget!) }}>
+                <Trash2 className="w-3.5 h-3.5 mr-1.5" />삭제
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* 작성/수정 모달 */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
