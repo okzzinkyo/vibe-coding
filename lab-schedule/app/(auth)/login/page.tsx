@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
@@ -10,7 +10,10 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
+
+const REMEMBER_EMAIL_KEY = 'lab-schedule:remembered-email'
 
 const schema = z.object({
   email: z.string().email('올바른 이메일을 입력하세요'),
@@ -22,12 +25,26 @@ type FormData = z.infer<typeof schema>
 export default function LoginPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const [rememberEmail, setRememberEmail] = useState(false)
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
 
+  useEffect(() => {
+    const saved = localStorage.getItem(REMEMBER_EMAIL_KEY)
+    if (saved) {
+      setValue('email', saved)
+      setRememberEmail(true)
+    }
+  }, [setValue])
+
   const onSubmit = async (data: FormData) => {
     setLoading(true)
+    if (rememberEmail) {
+      localStorage.setItem(REMEMBER_EMAIL_KEY, data.email)
+    } else {
+      localStorage.removeItem(REMEMBER_EMAIL_KEY)
+    }
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword(data)
     if (error) {
@@ -57,6 +74,16 @@ export default function LoginPage() {
             <Label htmlFor="password">비밀번호</Label>
             <Input id="password" type="password" placeholder="••••••" {...register('password')} />
             {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="remember-email"
+              checked={rememberEmail}
+              onCheckedChange={(checked) => setRememberEmail(checked === true)}
+            />
+            <Label htmlFor="remember-email" className="text-sm font-normal cursor-pointer">
+              이메일 기억하기
+            </Label>
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? '로그인 중...' : '로그인'}
