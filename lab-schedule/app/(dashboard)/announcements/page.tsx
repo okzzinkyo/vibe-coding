@@ -7,9 +7,7 @@ import { ko } from 'date-fns/locale'
 import { Plus, Pin, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { RichTextEditor } from '@/components/ui/rich-text-editor'
+import { AnnouncementFormModal } from '@/components/announcements/announcement-form-modal'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { Announcement, Profile } from '@/types/database'
@@ -19,12 +17,8 @@ export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<Announcement | null>(null)
   const [editing, setEditing] = useState<Announcement | null>(null)
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
-  const [pinned, setPinned] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Announcement | null>(null)
   const [deleting, setDeleting] = useState(false)
 
   const fetchData = useCallback(async () => {
@@ -42,45 +36,8 @@ export default function AnnouncementsPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const openNew = () => {
-    setEditing(null)
-    setTitle('')
-    setContent('')
-    setPinned(false)
-    setModalOpen(true)
-  }
-
-  const openEdit = (a: Announcement) => {
-    setEditing(a)
-    setTitle(a.title)
-    setContent(a.content)
-    setPinned(a.pinned)
-    setModalOpen(true)
-  }
-
-  const handleSave = async () => {
-    if (!title.trim() || !content.trim()) return
-    setSaving(true)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    let error
-    if (editing) {
-      ;({ error } = await supabase.from('announcements').update({ title, content, pinned }).eq('id', editing.id))
-    } else {
-      ;({ error } = await supabase.from('announcements').insert({ title, content, pinned, created_by: user.id }))
-    }
-
-    if (error) {
-      toast.error('저장 실패: ' + error.message)
-    } else {
-      toast.success('공지사항이 ' + (editing ? '수정' : '등록') + '되었습니다')
-      setModalOpen(false)
-      fetchData()
-    }
-    setSaving(false)
-  }
+  const openNew = () => { setEditing(null); setModalOpen(true) }
+  const openEdit = (a: Announcement) => { setEditing(a); setModalOpen(true) }
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -153,45 +110,12 @@ export default function AnnouncementsPage() {
         )}
       </div>
 
-      {/* 작성/수정 모달 */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
-          <DialogHeader className="shrink-0">
-            <DialogTitle>{editing ? '공지사항 수정' : '공지사항 작성'}</DialogTitle>
-            <DialogDescription className="sr-only">공지사항 내용을 입력하세요</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2 overflow-y-auto flex-1">
-            <div className="space-y-1.5">
-              <Label>제목</Label>
-              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="공지 제목" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>내용</Label>
-              <RichTextEditor
-                key={editing?.id ?? 'new'}
-                value={content}
-                onChange={setContent}
-                placeholder="공지 내용을 입력하세요..."
-              />
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={pinned}
-                onChange={e => setPinned(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <span className="text-sm font-medium">상단 고정</span>
-            </label>
-          </div>
-          <div className="flex gap-2 shrink-0">
-            <Button variant="outline" onClick={() => setModalOpen(false)} className="flex-1">취소</Button>
-            <Button onClick={handleSave} disabled={saving} className="flex-1">
-              {saving ? '저장 중...' : (editing ? '수정' : '등록')}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AnnouncementFormModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        announcement={editing}
+        onSuccess={fetchData}
+      />
 
       {/* 삭제 확인 다이얼로그 */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
