@@ -87,7 +87,7 @@ export default function AnnouncementsPage() {
                     <h3 className="font-semibold text-base">{a.title}</h3>
                   </div>
                   <div
-                    className="rich-text text-sm text-gray-600 line-clamp-2"
+                    className="rich-text text-sm text-gray-600 line-clamp-2 [&_a]:pointer-events-none [&_a]:no-underline [&_a]:text-inherit"
                     dangerouslySetInnerHTML={{ __html: a.content }}
                   />
                   <p className="text-xs text-muted-foreground mt-3">
