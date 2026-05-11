@@ -124,7 +124,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
           ))}
         </select>
       </div>
-      <div className="relative">
+      <div className="relative overflow-y-auto max-h-[300px]">
         {editor.isEmpty && !editor.isActive('bulletList') && !editor.isActive('orderedList') && placeholder && (
           <p className="pointer-events-none absolute left-3 top-2 text-sm text-muted-foreground">
             {placeholder}
