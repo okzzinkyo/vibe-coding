@@ -155,12 +155,12 @@ export default function AnnouncementsPage() {
 
       {/* 작성/수정 모달 */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle>{editing ? '공지사항 수정' : '공지사항 작성'}</DialogTitle>
             <DialogDescription className="sr-only">공지사항 내용을 입력하세요</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2 overflow-y-auto flex-1">
             <div className="space-y-1.5">
               <Label>제목</Label>
               <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="공지 제목" />
@@ -184,7 +184,7 @@ export default function AnnouncementsPage() {
               <span className="text-sm font-medium">상단 고정</span>
             </label>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 shrink-0">
             <Button variant="outline" onClick={() => setModalOpen(false)} className="flex-1">취소</Button>
             <Button onClick={handleSave} disabled={saving} className="flex-1">
               {saving ? '저장 중...' : (editing ? '수정' : '등록')}
