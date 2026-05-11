@@ -3,7 +3,8 @@
 import { useEditor, EditorContent, Extension } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { TextStyle } from '@tiptap/extension-text-style'
-import { Bold, Italic, List, ListOrdered } from 'lucide-react'
+import Link from '@tiptap/extension-link'
+import { Bold, Italic, List, ListOrdered, Link2, Link2Off } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const FontSize = Extension.create({
@@ -43,7 +44,20 @@ interface RichTextEditorProps {
 
 export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
   const editor = useEditor({
-    extensions: [StarterKit, TextStyle, FontSize],
+    extensions: [
+      StarterKit,
+      TextStyle,
+      FontSize,
+      Link.configure({
+        autolink: true,
+        openOnClick: false,
+        HTMLAttributes: {
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          class: 'text-blue-600 underline hover:text-blue-800',
+        },
+      }),
+    ],
     content: value,
     immediatelyRender: false,
     editorProps: {
@@ -61,11 +75,23 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
 
   const currentFontSize = editor.getAttributes('textStyle').fontSize ?? '14px'
 
+  const handleSetLink = () => {
+    const prev = editor.getAttributes('link').href ?? ''
+    const url = window.prompt('링크 URL을 입력하세요', prev)
+    if (url === null) return
+    if (url === '') {
+      editor.chain().focus().unsetLink().run()
+    } else {
+      editor.chain().focus().setLink({ href: url }).run()
+    }
+  }
+
   const tools = [
     { icon: Bold, label: '굵게', action: () => editor.chain().focus().toggleBold().run(), active: editor.isActive('bold') },
     { icon: Italic, label: '기울임', action: () => editor.chain().focus().toggleItalic().run(), active: editor.isActive('italic') },
     { icon: List, label: '글머리 기호', action: () => editor.chain().focus().toggleBulletList().run(), active: editor.isActive('bulletList') },
     { icon: ListOrdered, label: '번호 목록', action: () => editor.chain().focus().toggleOrderedList().run(), active: editor.isActive('orderedList') },
+    { icon: editor.isActive('link') ? Link2Off : Link2, label: editor.isActive('link') ? '링크 제거' : '링크 추가', action: handleSetLink, active: editor.isActive('link') },
   ]
 
   return (
