@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 const FontSize = Extension.create({
   name: 'fontSize',
   addOptions() {
-    return { types: ['textStyle'] }
+    return { types: ['textStyle', 'listItem'] }
   },
   addGlobalAttributes() {
     return [{
@@ -26,10 +26,12 @@ const FontSize = Extension.create({
   },
   addCommands() {
     return {
-      setFontSize: (size: string) => ({ chain }: { chain: () => { setMark: (...args: unknown[]) => { run: () => boolean } } }) =>
-        chain().setMark('textStyle', { fontSize: size }).run(),
-      unsetFontSize: () => ({ chain }: { chain: () => { setMark: (...args: unknown[]) => { removeEmptyTextStyle: () => { run: () => boolean } } } }) =>
-        chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setFontSize: (size: string) => ({ chain }: any) =>
+        chain().setMark('textStyle', { fontSize: size }).updateAttributes('listItem', { fontSize: size }).run(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      unsetFontSize: () => ({ chain }: any) =>
+        chain().setMark('textStyle', { fontSize: null }).updateAttributes('listItem', { fontSize: null }).removeEmptyTextStyle().run(),
     } as never
   },
 })
