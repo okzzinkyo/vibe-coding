@@ -5,10 +5,10 @@ import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { Plus, Pin, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { Announcement, Profile } from '@/types/database'
@@ -17,11 +17,13 @@ export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Announcement | null>(null)
   const [editing, setEditing] = useState<Announcement | null>(null)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [pinned, setPinned] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchData = useCallback(async () => {
     const supabase = createClient()
@@ -78,16 +80,19 @@ export default function AnnouncementsPage() {
     setSaving(false)
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('이 공지사항을 삭제하시겠습니까?')) return
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
     const supabase = createClient()
-    const { error } = await supabase.from('announcements').delete().eq('id', id)
+    const { error } = await supabase.from('announcements').delete().eq('id', deleteTarget.id)
     if (error) {
       toast.error('삭제 실패: ' + error.message)
     } else {
       toast.success('삭제되었습니다')
+      setDeleteTarget(null)
       fetchData()
     }
+    setDeleting(false)
   }
 
   const isAdmin = profile?.role === 'admin'
@@ -118,7 +123,10 @@ export default function AnnouncementsPage() {
                     {a.pinned && <Pin className="w-3.5 h-3.5 text-blue-500 shrink-0" />}
                     <h3 className="font-semibold text-base">{a.title}</h3>
                   </div>
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">{a.content}</p>
+                  <div
+                    className="rich-text text-sm text-gray-600"
+                    dangerouslySetInnerHTML={{ __html: a.content }}
+                  />
                   <p className="text-xs text-muted-foreground mt-3">
                     {format(new Date(a.created_at), 'yyyy년 M월 d일 HH:mm', { locale: ko })}
                   </p>
@@ -128,7 +136,7 @@ export default function AnnouncementsPage() {
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(a)}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-700" onClick={() => handleDelete(a.id)}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-700" onClick={() => setDeleteTarget(a)}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -139,20 +147,26 @@ export default function AnnouncementsPage() {
         )}
       </div>
 
+      {/* 작성/수정 모달 */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editing ? '공지사항 수정' : '공지사항 작성'}</DialogTitle>
             <DialogDescription className="sr-only">공지사항 내용을 입력하세요</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2 min-w-0 overflow-hidden">
+          <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>제목</Label>
               <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="공지 제목" />
             </div>
             <div className="space-y-1.5">
               <Label>내용</Label>
-              <Textarea value={content} onChange={e => setContent(e.target.value)} rows={5} placeholder="공지 내용..." className="resize-none" />
+              <RichTextEditor
+                key={editing?.id ?? 'new'}
+                value={content}
+                onChange={setContent}
+                placeholder="공지 내용을 입력하세요..."
+              />
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -170,6 +184,24 @@ export default function AnnouncementsPage() {
               {saving ? '저장 중...' : (editing ? '수정' : '등록')}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 삭제 확인 다이얼로그 */}
+      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>공지사항 삭제</DialogTitle>
+            <DialogDescription>
+              &quot;{deleteTarget?.title}&quot; 공지사항을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>취소</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? '삭제 중...' : '삭제'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
