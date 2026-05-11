@@ -12,8 +12,10 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { Announcement, Profile } from '@/types/database'
 
-function stripLinks(html: string) {
-  return html.replace(/<a[^>]*>([\s\S]*?)<\/a>/g, '$1')
+function normalizePreview(html: string) {
+  return html
+    .replace(/<a[^>]*>([\s\S]*?)<\/a>/g, '$1')
+    .replace(/font-size:[^;";]*(;)?/g, '')
 }
 
 export default function AnnouncementsPage() {
@@ -92,7 +94,7 @@ export default function AnnouncementsPage() {
                   </div>
                   <div
                     className="rich-text text-sm text-gray-600 line-clamp-2"
-                    dangerouslySetInnerHTML={{ __html: stripLinks(a.content) }}
+                    dangerouslySetInnerHTML={{ __html: normalizePreview(a.content) }}
                   />
                   <p className="text-xs text-muted-foreground mt-3">
                     {format(new Date(a.created_at), 'yyyy년 M월 d일 HH:mm', { locale: ko })}
