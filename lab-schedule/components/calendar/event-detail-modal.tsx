@@ -237,7 +237,7 @@ export default function EventDetailModal({ event, isAdmin, open, onClose, onUpda
           onClose={() => setEditOpen(false)}
           onSaved={onUpdated}
           defaultValues={event}
-          editScope={event.recurrence_group_id ? editScope : undefined}
+          editScope={event.recurrence_group_id ? editScope : 'single'}
         />
       )}
     </>
