@@ -61,7 +61,8 @@ async function generateProblem(topic, difficulty) {
     ],
   });
 
-  const text = message.content[0].text.trim();
+  const raw = message.content[0].text.trim();
+  const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
   return JSON.parse(text);
 }
 
