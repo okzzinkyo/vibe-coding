@@ -16,6 +16,7 @@
 | [pipeline-agent-test](./pipeline-agent-test/) | 논문 작성 3-에이전트 파이프라인 실험 — researcher → executor → critic 순서로 협업 | Gemini CLI, Python | 실험 완료 |
 | [single-agent-test](./single-agent-test/) | 논문 작성 단일 에이전트 실험 — pipeline-agent-test의 비교 베이스라인 | Gemini CLI, Python | 실험 완료 |
 | [lab-inventory](./lab-inventory/) | 연구실 물품 재고 관리 서비스 — 물품 CRUD, 카테고리 관리, 사진/파일 첨부, 엑셀 다운로드 | React, Vite, TypeScript, Tailwind CSS v4, Supabase, Vercel | 완료 |
+| [lab-schedule](./lab-schedule/) | 연구실 일정·이벤트·공지사항 관리 서비스 — 캘린더 뷰, 리치 텍스트 공지 작성, 관리자 기능 | Next.js, TypeScript, Supabase, Tiptap, react-big-calendar | 운영 중 |
 | [sql-daily](./sql-daily/) | 평일 매일 오전 8시 SQL 연습 문제 이메일 구독 — Claude API로 문제 생성, Resend로 발송 | Node.js, Claude API, Resend, GitHub Actions | 운영 중 |
 
 ---
