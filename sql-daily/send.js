@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { Resend } from 'resend';
+import Database from 'better-sqlite3';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -29,6 +30,69 @@ function getRotation(dayIndex) {
   return { topic, difficulty };
 }
 
+function normalizeToSQLite(sql) {
+  return sql
+    .replace(/AUTO_INCREMENT/gi, '')
+    .replace(/UNSIGNED/gi, '')
+    .replace(/ENGINE\s*=\s*\S+/gi, '')
+    .replace(/DEFAULT\s+CHARSET\s*=\s*\S+/gi, '')
+    .replace(/CHARSET\s*=\s*\S+/gi, '')
+    .replace(/COLLATE\s*=?\s*\S+/gi, '')
+    .replace(/COMMENT\s+'[^']*'/gi, '')
+    .trim();
+}
+
+function formatAsMarkdownTable(rows) {
+  if (!rows || rows.length === 0) return '(결과 없음)';
+  const headers = Object.keys(rows[0]);
+  const headerRow = '| ' + headers.join(' | ') + ' |';
+  const divider = '| ' + headers.map(() => '---').join(' | ') + ' |';
+  const dataRows = rows.map(row =>
+    '| ' + headers.map(h => String(row[h] ?? 'NULL')).join(' | ') + ' |'
+  );
+  return [headerRow, divider, ...dataRows].join('\n');
+}
+
+function runOnSQLite(schema, answer) {
+  const db = new Database(':memory:');
+  try {
+    db.exec(normalizeToSQLite(schema));
+    const rows = db.prepare(normalizeToSQLite(answer)).all();
+    return formatAsMarkdownTable(rows);
+  } finally {
+    db.close();
+  }
+}
+
+async function computeExpectedOutputFallback(schema, answer) {
+  const message = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 500,
+    messages: [{
+      role: 'user',
+      content: `아래 스키마의 INSERT 데이터를 직접 추적해서, 쿼리 실행 결과를 마크다운 테이블 형식으로만 출력하세요. 다른 텍스트는 절대 포함하지 마세요.
+
+스키마 및 샘플 데이터:
+${schema}
+
+실행할 쿼리:
+${answer}`,
+    }],
+  });
+  return message.content[0].text.trim();
+}
+
+async function getExpectedOutput(problem) {
+  try {
+    const result = runOnSQLite(problem.schema, problem.answer);
+    console.log('SQLite 실행 성공 → 실제 결과 사용');
+    return result;
+  } catch (err) {
+    console.warn('SQLite 실행 실패, Claude 폴백:', err.message);
+    return computeExpectedOutputFallback(problem.schema, problem.answer);
+  }
+}
+
 async function generateProblem(topic, difficulty) {
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
@@ -42,7 +106,9 @@ async function generateProblem(topic, difficulty) {
 - 주제: ${topic}
 - 난이도: ${difficulty}
 - 실제 업무에서 자주 쓰이는 현실적인 시나리오
-- MySQL 또는 PostgreSQL 기준
+- MySQL 기준이지만 표준 SQL 함수만 사용할 것
+- 금지 함수: DATE_FORMAT, DATEDIFF, STR_TO_DATE, IFNULL, GROUP_CONCAT...SEPARATOR
+- 대신 사용: COALESCE, DATE, EXTRACT, YEAR, MONTH, DAY, CASE WHEN
 
 반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 
@@ -53,7 +119,6 @@ async function generateProblem(topic, difficulty) {
   "scenario": "문제 배경 설명 (2~3문장)",
   "schema": "CREATE TABLE 문 (샘플 데이터 INSERT 포함, 5~8행)",
   "question": "구체적인 문제 요구사항",
-  "expected_output": "컬럼명과 샘플 결과 (마크다운 테이블)",
   "hint": "풀이 방향 힌트 (1~2문장)",
   "answer": "정답 SQL 쿼리 (주석 포함)"
 }`,
@@ -167,6 +232,8 @@ async function main() {
 
   const problem = await generateProblem(topic, difficulty);
   console.log(`문제 생성 완료: ${problem.title}`);
+
+  problem.expected_output = await getExpectedOutput(problem);
 
   const today = new Date();
   const dateStr = today.toLocaleDateString('ko-KR', {

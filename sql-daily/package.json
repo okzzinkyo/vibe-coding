@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.2",
+    "better-sqlite3": "^12.10.0",
     "resend": "^6.12.3"
   }
 }
