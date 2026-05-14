@@ -41,6 +41,12 @@ create table public.event_participants (
   unique(event_id, profile_id)
 );
 
+-- Data API 접근 권한 부여
+grant select, insert, update, delete on public.profiles to authenticated;
+grant select, insert, update, delete on public.events to authenticated;
+grant select, insert, update, delete on public.announcements to authenticated;
+grant select, insert, update, delete on public.event_participants to authenticated;
+
 -- RLS 활성화
 alter table public.profiles enable row level security;
 alter table public.events enable row level security;
