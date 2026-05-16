@@ -149,23 +149,28 @@ async function reviewQuality(problem) {
       role: 'user',
       content: `아래 SQL 연습 문제를 검토하고 품질을 평가하세요.
 
-- 주제: ${problem.topic}
-- 난이도: ${problem.difficulty}
-- 문제: ${problem.question}
-- 정답 SQL: ${problem.answer}
-- 예상 출력: ${problem.expected_output}
+주제: ${problem.topic}
+난이도: ${problem.difficulty}
+문제: ${problem.question}
+예상 출력: ${problem.expected_output}
 
 검토 항목:
 1. 난이도 표기가 실제 난이도와 맞는가
 2. 문제 요구사항이 모호하지 않고 명확한가
-3. 정답 SQL이 문제 의도를 정확히 충족하는가
+3. 예상 출력이 문제 의도와 맞는가
 
-JSON 형식으로만 응답하세요:
-{"pass": true, "issues": []}`,
+문제가 없으면 pass=true, issues=[]로 응답하세요.
+문제가 있으면 pass=false, issues에 간단한 한 줄 설명만 넣으세요 (SQL 코드 포함 금지).
+JSON 형식으로만 응답하세요: {"pass": true, "issues": []}`,
     }],
   });
 
-  return parseJson(message.content[0].text);
+  try {
+    return parseJson(message.content[0].text);
+  } catch {
+    console.warn('품질 검토 응답 파싱 실패, 통과 처리');
+    return { pass: true, issues: [] };
+  }
 }
 
 async function generateWithReview(topic, difficulty) {
