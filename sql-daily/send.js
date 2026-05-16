@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { Resend } from 'resend';
-import Database from 'better-sqlite3';
+import mysql from 'mysql2/promise';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -30,18 +30,6 @@ function getRotation(dayIndex) {
   return { topic, difficulty };
 }
 
-function normalizeToSQLite(sql) {
-  return sql
-    .replace(/AUTO_INCREMENT/gi, '')
-    .replace(/UNSIGNED/gi, '')
-    .replace(/ENGINE\s*=\s*\S+/gi, '')
-    .replace(/DEFAULT\s+CHARSET\s*=\s*\S+/gi, '')
-    .replace(/CHARSET\s*=\s*\S+/gi, '')
-    .replace(/COLLATE\s*=?\s*\S+/gi, '')
-    .replace(/COMMENT\s+'[^']*'/gi, '')
-    .trim();
-}
-
 function formatAsMarkdownTable(rows) {
   if (!rows || rows.length === 0) return '(결과 없음)';
   const headers = Object.keys(rows[0]);
@@ -53,15 +41,28 @@ function formatAsMarkdownTable(rows) {
   return [headerRow, divider, ...dataRows].join('\n');
 }
 
-function runOnSQLite(schema, answer) {
-  const db = new Database(':memory:');
+async function executeOnMySQL(schema, query) {
+  const dbName = `sql_daily_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const conn = await mysql.createConnection({
+    host: '127.0.0.1',
+    user: 'root',
+    multipleStatements: true,
+  });
   try {
-    db.exec(normalizeToSQLite(schema));
-    const rows = db.prepare(normalizeToSQLite(answer)).all();
-    return formatAsMarkdownTable(rows);
+    await conn.query(`CREATE DATABASE \`${dbName}\``);
+    await conn.query(`USE \`${dbName}\``);
+    await conn.query(schema);
+    const [rows] = await conn.query(query);
+    return { rows, markdown: formatAsMarkdownTable(rows) };
   } finally {
-    db.close();
+    await conn.query(`DROP DATABASE IF EXISTS \`${dbName}\``);
+    await conn.end();
   }
+}
+
+async function runOnMySQL(schema, answer) {
+  const { markdown } = await executeOnMySQL(schema, answer);
+  return markdown;
 }
 
 async function computeExpectedOutputFallback(schema, answer) {
@@ -84,13 +85,122 @@ ${answer}`,
 
 async function getExpectedOutput(problem) {
   try {
-    const result = runOnSQLite(problem.schema, problem.answer);
-    console.log('SQLite 실행 성공 → 실제 결과 사용');
+    const result = await runOnMySQL(problem.schema, problem.answer);
+    console.log('MySQL 실행 성공 → 실제 결과 사용');
     return result;
   } catch (err) {
-    console.warn('SQLite 실행 실패, Claude 폴백:', err.message);
+    console.warn('MySQL 실행 실패, Claude 폴백:', err.message);
     return computeExpectedOutputFallback(problem.schema, problem.answer);
   }
+}
+
+function parseJson(text) {
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  return JSON.parse(cleaned);
+}
+
+// 컬럼명·순서 무관하게 행 값 집합을 비교
+function normalizeRows(rows) {
+  const normalized = rows.map(r =>
+    Object.values(r).map(v => String(v ?? 'NULL')).sort()
+  ).sort((a, b) => a.join('|').localeCompare(b.join('|')));
+  return JSON.stringify(normalized);
+}
+
+async function reviewSolve(problem) {
+  const message = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1000,
+    messages: [{
+      role: 'user',
+      content: `당신은 SQL 전문가입니다. 아래 스키마와 문제만 보고 MySQL 5.7 쿼리를 작성하세요. 정답을 보지 마세요.
+
+스키마 및 샘플 데이터:
+${problem.schema}
+
+문제:
+${problem.question}
+
+JSON 형식으로만 응답하세요 (다른 텍스트 없이):
+{"sql": "쿼리"}`,
+    }],
+  });
+
+  const { sql: reviewerSQL } = parseJson(message.content[0].text);
+
+  const [originalResult, reviewerResult] = await Promise.all([
+    executeOnMySQL(problem.schema, problem.answer),
+    executeOnMySQL(problem.schema, reviewerSQL),
+  ]);
+
+  const pass = normalizeRows(originalResult.rows) === normalizeRows(reviewerResult.rows);
+  return {
+    pass,
+    reviewerSQL,
+    issue: pass ? null : `리뷰어 풀이 결과 불일치\n리뷰어 쿼리: ${reviewerSQL}\n리뷰어 결과:\n${reviewerResult.markdown}`,
+  };
+}
+
+async function reviewQuality(problem) {
+  const message = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 500,
+    messages: [{
+      role: 'user',
+      content: `아래 SQL 연습 문제를 검토하고 품질을 평가하세요.
+
+- 주제: ${problem.topic}
+- 난이도: ${problem.difficulty}
+- 문제: ${problem.question}
+- 정답 SQL: ${problem.answer}
+- 예상 출력: ${problem.expected_output}
+
+검토 항목:
+1. 난이도 표기가 실제 난이도와 맞는가
+2. 문제 요구사항이 모호하지 않고 명확한가
+3. 정답 SQL이 문제 의도를 정확히 충족하는가
+
+JSON 형식으로만 응답하세요:
+{"pass": true, "issues": []}`,
+    }],
+  });
+
+  return parseJson(message.content[0].text);
+}
+
+async function generateWithReview(topic, difficulty) {
+  const MAX_RETRIES = 3;
+  let lastProblem;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    console.log(`문제 생성 중... (시도 ${attempt}/${MAX_RETRIES})`);
+    const problem = await generateProblem(topic, difficulty);
+    problem.expected_output = await getExpectedOutput(problem);
+    lastProblem = problem;
+
+    console.log('리뷰 중...');
+    const [qualityReview, solveReview] = await Promise.all([
+      reviewQuality(problem),
+      reviewSolve(problem).catch(err => ({ pass: false, issue: err.message })),
+    ]);
+
+    const issues = [
+      ...(qualityReview.issues ?? []),
+      ...(solveReview.issue ? [solveReview.issue] : []),
+    ];
+    const pass = qualityReview.pass && solveReview.pass;
+
+    if (pass) {
+      console.log(`리뷰 통과 (시도 ${attempt}회)`);
+      return problem;
+    }
+
+    console.warn(`리뷰 실패:\n${issues.join('\n')}`);
+    if (attempt < MAX_RETRIES) console.log('재생성합니다...');
+  }
+
+  console.warn('최대 재시도 초과, 마지막 생성 결과 사용');
+  return lastProblem;
 }
 
 async function generateProblem(topic, difficulty) {
@@ -106,9 +216,7 @@ async function generateProblem(topic, difficulty) {
 - 주제: ${topic}
 - 난이도: ${difficulty}
 - 실제 업무에서 자주 쓰이는 현실적인 시나리오
-- MySQL 기준이지만 표준 SQL 함수만 사용할 것
-- 금지 함수: DATE_FORMAT, DATEDIFF, STR_TO_DATE, IFNULL, GROUP_CONCAT...SEPARATOR
-- 대신 사용: COALESCE, DATE, EXTRACT, YEAR, MONTH, DAY, CASE WHEN
+- MySQL 5.7 기준 문법 사용
 
 반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 
@@ -126,9 +234,7 @@ async function generateProblem(topic, difficulty) {
     ],
   });
 
-  const raw = message.content[0].text.trim();
-  const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-  return JSON.parse(text);
+  return parseJson(message.content[0].text);
 }
 
 function buildEmailHtml(problem, dateStr) {
@@ -228,12 +334,10 @@ async function main() {
   const dayIndex = getDayIndex();
   const { topic, difficulty } = getRotation(dayIndex);
 
-  console.log(`문제 생성 중... 주제: ${topic}, 난이도: ${difficulty}`);
+  console.log(`주제: ${topic}, 난이도: ${difficulty}`);
 
-  const problem = await generateProblem(topic, difficulty);
-  console.log(`문제 생성 완료: ${problem.title}`);
-
-  problem.expected_output = await getExpectedOutput(problem);
+  const problem = await generateWithReview(topic, difficulty);
+  console.log(`최종 문제: ${problem.title}`);
 
   const today = new Date();
   const dateStr = today.toLocaleDateString('ko-KR', {
@@ -246,19 +350,40 @@ async function main() {
 
   const html = buildEmailHtml(problem, dateStr);
 
-  const { data, error } = await resend.emails.send({
-    from: 'SQL Daily <onboarding@resend.dev>',
-    to: process.env.TO_EMAIL,
-    subject: `[SQL] ${problem.difficulty} | ${problem.title}`,
-    html,
-  });
-
-  if (error) {
-    console.error('이메일 발송 실패:', error);
-    process.exit(1);
+  let emails;
+  if (process.env.TEST_EMAIL) {
+    emails = [process.env.TEST_EMAIL];
+    console.log(`[테스트] ${process.env.TEST_EMAIL} 으로만 발송`);
+  } else {
+    const { data: contacts, error: contactsError } = await resend.contacts.list({
+      segmentId: process.env.RESEND_SEGMENT_ID,
+    });
+    if (contactsError) {
+      console.error('구독자 목록 조회 실패:', contactsError);
+      process.exit(1);
+    }
+    emails = contacts.filter(c => !c.unsubscribed).map(c => c.email);
+    if (emails.length === 0) {
+      console.log('활성 구독자 없음, 종료');
+      return;
+    }
+    console.log(`구독자 ${emails.length}명에게 발송 중...`);
   }
 
-  console.log(`이메일 발송 완료: ${data.id}`);
+  const results = await Promise.all(
+    emails.map(email =>
+      resend.emails.send({
+        from: 'SQL Daily <onboarding@resend.dev>',
+        to: email,
+        subject: `[SQL] ${problem.difficulty} | ${problem.title}`,
+        html,
+      })
+    )
+  );
+
+  const failed = results.filter(r => r.error);
+  if (failed.length > 0) console.error(`발송 실패 ${failed.length}건`);
+  console.log(`발송 완료: ${emails.length - failed.length}/${emails.length}명`);
 }
 
 main().catch((err) => {
