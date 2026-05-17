@@ -404,7 +404,10 @@ async function main() {
   );
 
   const failed = results.filter(r => r.error);
-  if (failed.length > 0) console.error(`발송 실패 ${failed.length}건`);
+  if (failed.length > 0) {
+    failed.forEach((r, i) => console.error(`발송 실패 [${i + 1}]:`, JSON.stringify(r.error)));
+    console.error(`총 발송 실패 ${failed.length}건`);
+  }
   console.log(`발송 완료: ${emails.length - failed.length}/${emails.length}명`);
 }
 
