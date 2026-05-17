@@ -1,9 +1,16 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import mysql from 'mysql2/promise';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const resend = new Resend(process.env.RESEND_API_KEY);
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
 
 const TOPICS = [
   'SELECT / WHERE / ORDER BY',
@@ -376,39 +383,29 @@ async function main() {
     emails = [process.env.TEST_EMAIL];
     console.log(`[테스트] ${process.env.TEST_EMAIL} 으로만 발송`);
   } else {
-    const { data: contactsResult, error: contactsError } = await resend.contacts.list({
-      segmentId: process.env.RESEND_SEGMENT_ID,
-    });
-    if (contactsError) {
-      console.error('구독자 목록 조회 실패:', contactsError);
-      process.exit(1);
-    }
-    const contactList = Array.isArray(contactsResult) ? contactsResult : (contactsResult?.data ?? []);
-    emails = contactList.filter(c => !c.unsubscribed).map(c => c.email);
+    emails = (process.env.RECIPIENT_EMAILS ?? '').split(',').map(e => e.trim()).filter(Boolean);
     if (emails.length === 0) {
-      console.log('활성 구독자 없음, 종료');
+      console.log('수신자 없음 (RECIPIENT_EMAILS 환경변수 확인), 종료');
       return;
     }
     console.log(`구독자 ${emails.length}명에게 발송 중...`);
   }
 
-  const results = await Promise.all(
-    emails.map(email =>
-      resend.emails.send({
-        from: 'SQL Daily <onboarding@resend.dev>',
+  let successCount = 0;
+  for (const email of emails) {
+    try {
+      await transporter.sendMail({
+        from: `SQL Daily <${process.env.GMAIL_USER}>`,
         to: email,
         subject: `[SQL] ${problem.difficulty} | ${problem.title}`,
         html,
-      })
-    )
-  );
-
-  const failed = results.filter(r => r.error);
-  if (failed.length > 0) {
-    failed.forEach((r, i) => console.error(`발송 실패 [${i + 1}]:`, JSON.stringify(r.error)));
-    console.error(`총 발송 실패 ${failed.length}건`);
+      });
+      successCount++;
+    } catch (err) {
+      console.error(`발송 실패 [${email}]:`, err.message);
+    }
   }
-  console.log(`발송 완료: ${emails.length - failed.length}/${emails.length}명`);
+  console.log(`발송 완료: ${successCount}/${emails.length}명`);
 }
 
 main().catch((err) => {

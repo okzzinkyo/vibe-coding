@@ -41,7 +41,9 @@ jobs:
       - name: Send SQL problem
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          RESEND_SEGMENT_ID: ${{ secrets.RESEND_SEGMENT_ID }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          RECIPIENT_EMAILS: ${{ secrets.RECIPIENT_EMAILS }}
+          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
         run: node send.js
         working-directory: sql-daily
