@@ -244,7 +244,8 @@ async function generateProblem(topic, difficulty, previousIssues = []) {
 - 난이도: ${difficulty}
 - 실제 업무에서 자주 쓰이는 현실적인 시나리오
 - MySQL 5.7 기준 문법 사용
-- 샘플 데이터의 이름, 값 등은 영문 또는 숫자만 사용 (한글 데이터 금지)${issueBlock}
+- 샘플 데이터의 이름, 값 등은 영문 또는 숫자만 사용 (한글 데이터 금지)
+- 문제에 'HAVING 사용 금지', 'JOIN 사용 금지' 등 특정 SQL 절 사용을 금지하는 인위적 제약을 넣지 말 것${issueBlock}
 
 반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 
