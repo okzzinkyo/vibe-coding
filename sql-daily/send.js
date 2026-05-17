@@ -47,6 +47,7 @@ async function executeOnMySQL(schema, query) {
     host: '127.0.0.1',
     user: 'root',
     multipleStatements: true,
+    charset: 'utf8mb4',
   });
   try {
     await conn.query(`CREATE DATABASE \`${dbName}\``);
@@ -176,10 +177,11 @@ JSON 형식으로만 응답하세요: {"pass": true, "issues": []}`,
 async function generateWithReview(topic, difficulty) {
   const MAX_RETRIES = 3;
   let lastProblem;
+  let previousIssues = [];
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     console.log(`문제 생성 중... (시도 ${attempt}/${MAX_RETRIES})`);
-    const problem = await generateProblem(topic, difficulty);
+    const problem = await generateProblem(topic, difficulty, previousIssues);
     problem.expected_output = await getExpectedOutput(problem);
     lastProblem = problem;
 
@@ -201,6 +203,7 @@ async function generateWithReview(topic, difficulty) {
     }
 
     console.warn(`리뷰 실패:\n${issues.join('\n')}`);
+    previousIssues = issues;
     if (attempt < MAX_RETRIES) console.log('재생성합니다...');
   }
 
@@ -208,7 +211,11 @@ async function generateWithReview(topic, difficulty) {
   return lastProblem;
 }
 
-async function generateProblem(topic, difficulty) {
+async function generateProblem(topic, difficulty, previousIssues = []) {
+  const issueBlock = previousIssues.length > 0
+    ? `\n\n이전 시도에서 아래 문제가 발견되었습니다. 반드시 수정해서 생성하세요:\n${previousIssues.map((iss, i) => `${i + 1}. ${iss}`).join('\n')}`
+    : '';
+
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 2000,
@@ -222,6 +229,7 @@ async function generateProblem(topic, difficulty) {
 - 난이도: ${difficulty}
 - 실제 업무에서 자주 쓰이는 현실적인 시나리오
 - MySQL 5.7 기준 문법 사용
+- 샘플 데이터의 이름, 값 등은 영문 또는 숫자만 사용 (한글 데이터 금지)${issueBlock}
 
 반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 
