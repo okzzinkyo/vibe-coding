@@ -264,6 +264,7 @@ async function generateProblem(topic, difficulty, previousIssues = []) {
 - 샘플 데이터의 이름, 값 등은 영문 또는 숫자만 사용 (한글 데이터 금지)
 - 샘플 데이터는 NULL 값, 경계값, 그룹별 다양한 케이스를 포함하고 예상 출력이 2~5행이 되도록 설계할 것
 - 문제에 'HAVING 사용 금지', 'JOIN 사용 금지' 등 특정 SQL 절 사용을 금지하는 인위적 제약을 넣지 말 것
+- answer 필드의 SQL 주석에 예상 출력이나 결과 테이블을 포함하지 말 것 (예상 출력은 별도로 제공됨)
 - 주제 핵심 요건: ${TOPIC_KEYWORDS[topic]}${issueBlock}
 
 반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
