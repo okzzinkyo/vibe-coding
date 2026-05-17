@@ -23,6 +23,17 @@ const TOPICS = [
   '날짜 함수 / 문자열 함수',
 ];
 
+const TOPIC_KEYWORDS = {
+  'SELECT / WHERE / ORDER BY': 'WHERE 조건 필터링, ORDER BY 정렬이 핵심이어야 함. 집계함수나 서브쿼리가 핵심이 되어선 안 됨',
+  'GROUP BY / HAVING / 집계 함수': 'GROUP BY와 HAVING, COUNT/SUM/AVG/MAX/MIN 등 집계함수가 핵심이어야 함',
+  'INNER JOIN / LEFT JOIN': 'JOIN(INNER 또는 LEFT)으로 두 테이블 이상을 연결하는 것이 핵심이어야 함',
+  '서브쿼리 (Subquery)': 'SELECT/WHERE/FROM 절 안에 서브쿼리가 핵심이어야 함',
+  'CTE (WITH 절)': 'WITH 절로 CTE를 정의하고 활용하는 것이 핵심이어야 함',
+  'NULL 처리 / COALESCE / CASE WHEN': 'COALESCE, IFNULL, CASE WHEN, IS NULL 등 NULL 처리 또는 조건 분기가 핵심이어야 함',
+  '윈도우 함수 (ROW_NUMBER, RANK, LAG, LEAD)': 'ROW_NUMBER, RANK, DENSE_RANK, LAG, LEAD 등 OVER() 윈도우 함수가 핵심이어야 함',
+  '날짜 함수 / 문자열 함수': 'DATE_FORMAT, DATEDIFF, YEAR/MONTH/DAY, SUBSTRING, CONCAT, REPLACE 등 날짜/문자열 함수가 핵심이어야 함',
+};
+
 const DIFFICULTIES = ['초급', '초급', '중급', '중급', '중급', '고급'];
 
 function getDayIndex() {
@@ -174,6 +185,7 @@ async function reviewQuality(problem) {
 1. 난이도 표기가 실제 난이도와 맞는가
 2. 문제 요구사항이 모호하지 않고 명확한가
 3. 예상 출력이 문제 의도와 맞는가
+4. 정답 쿼리의 핵심이 실제로 지정된 주제(${problem.topic})의 함수/절을 사용하는가 (다른 개념이 핵심이면 주제 불일치)
 
 문제가 없으면 pass=true, issues=[]로 응답하세요.
 문제가 있으면 pass=false, issues에 간단한 한 줄 설명만 넣으세요 (SQL 코드 포함 금지).
@@ -245,7 +257,9 @@ async function generateProblem(topic, difficulty, previousIssues = []) {
 - 실제 업무에서 자주 쓰이는 현실적인 시나리오
 - MySQL 5.7 기준 문법 사용
 - 샘플 데이터의 이름, 값 등은 영문 또는 숫자만 사용 (한글 데이터 금지)
-- 문제에 'HAVING 사용 금지', 'JOIN 사용 금지' 등 특정 SQL 절 사용을 금지하는 인위적 제약을 넣지 말 것${issueBlock}
+- 샘플 데이터는 NULL 값, 경계값, 그룹별 다양한 케이스를 포함하고 예상 출력이 2~5행이 되도록 설계할 것
+- 문제에 'HAVING 사용 금지', 'JOIN 사용 금지' 등 특정 SQL 절 사용을 금지하는 인위적 제약을 넣지 말 것
+- 주제 핵심 요건: ${TOPIC_KEYWORDS[topic]}${issueBlock}
 
 반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 
