@@ -205,6 +205,30 @@ JSON 형식으로만 응답하세요: {"pass": true, "issues": []}`,
   }
 }
 
+async function generateAlternativeSolution(problem) {
+  const message = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1000,
+    messages: [{
+      role: 'user',
+      content: `아래 SQL 문제의 정답과 다른 방식으로 풀어주세요. MySQL 5.7 기준입니다.
+
+스키마:
+${problem.schema}
+
+문제:
+${problem.question}
+
+기존 정답 (이 방식과 다르게 풀어야 함):
+${problem.answer}
+
+다른 접근법(예: 서브쿼리 ↔ JOIN, CTE ↔ 인라인 뷰 등)으로 같은 결과를 내는 쿼리를 작성하세요.
+SQL 쿼리만 응답하세요 (설명 텍스트 없이).`,
+    }],
+  });
+  return message.content[0].text.trim();
+}
+
 async function generateWithReview(topic, difficulty) {
   const MAX_RETRIES = 3;
   let lastProblem;
@@ -230,6 +254,7 @@ async function generateWithReview(topic, difficulty) {
 
     if (pass) {
       console.log(`리뷰 통과 (시도 ${attempt}회)`);
+      problem.alternative = await generateAlternativeSolution(problem).catch(() => null);
       return problem;
     }
 
@@ -380,7 +405,12 @@ function buildEmailHtml(problem, dateStr) {
           ▶ 정답 보기 (풀어본 후 확인하세요)
         </summary>
         <div style="padding:0 16px 16px;">
-          <pre style="margin:16px 0 0;background:#0f172a;color:#a5f3fc;padding:16px;border-radius:8px;font-size:13px;overflow-x:auto;line-height:1.6;">${problem.answer}</pre>
+          <p style="margin:16px 0 6px;font-size:13px;font-weight:600;color:#64748b;">풀이 1</p>
+          <pre style="margin:0;background:#0f172a;color:#a5f3fc;padding:16px;border-radius:8px;font-size:13px;overflow-x:auto;line-height:1.6;">${problem.answer}</pre>
+          ${problem.alternative ? `
+          <p style="margin:16px 0 6px;font-size:13px;font-weight:600;color:#64748b;">풀이 2 (다른 접근법)</p>
+          <pre style="margin:0;background:#0f172a;color:#a5f3fc;padding:16px;border-radius:8px;font-size:13px;overflow-x:auto;line-height:1.6;">${problem.alternative}</pre>
+          ` : ''}
         </div>
       </details>
 
