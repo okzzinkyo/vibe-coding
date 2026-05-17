@@ -79,7 +79,11 @@ async function executeOnMySQL(schema, query) {
     await conn.query(`CREATE DATABASE \`${dbName}\``);
     await conn.query(`USE \`${dbName}\``);
     await conn.query(schema);
-    const [rows] = await conn.query(query);
+    const [result] = await conn.query(query);
+    // multipleStatements:true 로 인해 다중 쿼리 결과가 [[rows1],[rows2]] 형태로 올 수 있음
+    const rows = Array.isArray(result) && Array.isArray(result[0])
+      ? result.find(r => Array.isArray(r)) ?? []
+      : result;
     return { rows, markdown: formatAsMarkdownTable(rows) };
   } finally {
     await conn.query(`DROP DATABASE IF EXISTS \`${dbName}\``);
