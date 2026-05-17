@@ -223,10 +223,12 @@ ${problem.question}
 ${problem.answer}
 
 다른 접근법(예: 서브쿼리 ↔ JOIN, CTE ↔ 인라인 뷰 등)으로 같은 결과를 내는 쿼리를 작성하세요.
-SQL 쿼리만 응답하세요 (설명 텍스트 없이).`,
+의미 있는 대안 풀이가 없으면 NONE 이라고만 응답하세요.
+대안이 있으면 SQL 쿼리만 응답하세요 (설명 텍스트 없이).`,
     }],
   });
-  return message.content[0].text.trim();
+  const text = message.content[0].text.trim();
+  return text === 'NONE' ? null : text;
 }
 
 async function generateWithReview(topic, difficulty) {
