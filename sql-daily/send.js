@@ -368,14 +368,15 @@ async function main() {
     emails = [process.env.TEST_EMAIL];
     console.log(`[테스트] ${process.env.TEST_EMAIL} 으로만 발송`);
   } else {
-    const { data: contacts, error: contactsError } = await resend.contacts.list({
+    const { data: contactsResult, error: contactsError } = await resend.contacts.list({
       segmentId: process.env.RESEND_SEGMENT_ID,
     });
     if (contactsError) {
       console.error('구독자 목록 조회 실패:', contactsError);
       process.exit(1);
     }
-    emails = contacts.filter(c => !c.unsubscribed).map(c => c.email);
+    const contactList = Array.isArray(contactsResult) ? contactsResult : (contactsResult?.data ?? []);
+    emails = contactList.filter(c => !c.unsubscribed).map(c => c.email);
     if (emails.length === 0) {
       console.log('활성 구독자 없음, 종료');
       return;
