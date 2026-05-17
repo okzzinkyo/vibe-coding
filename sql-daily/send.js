@@ -30,13 +30,21 @@ function getRotation(dayIndex) {
   return { topic, difficulty };
 }
 
+function formatValue(val) {
+  if (val === null || val === undefined) return 'NULL';
+  if (val instanceof Date) return val.toISOString().replace('T', ' ').slice(0, 19);
+  if (Buffer.isBuffer(val)) return val.toString('hex');
+  if (typeof val === 'object') return JSON.stringify(val);
+  return String(val);
+}
+
 function formatAsMarkdownTable(rows) {
   if (!rows || rows.length === 0) return '(결과 없음)';
   const headers = Object.keys(rows[0]);
   const headerRow = '| ' + headers.join(' | ') + ' |';
   const divider = '| ' + headers.map(() => '---').join(' | ') + ' |';
   const dataRows = rows.map(row =>
-    '| ' + headers.map(h => String(row[h] ?? 'NULL')).join(' | ') + ' |'
+    '| ' + headers.map(h => formatValue(row[h])).join(' | ') + ' |'
   );
   return [headerRow, divider, ...dataRows].join('\n');
 }
