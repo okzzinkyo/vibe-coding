@@ -260,6 +260,7 @@ async function generateProblem(topic, difficulty, previousIssues = []) {
 - 난이도: ${difficulty}
 - 실제 업무에서 자주 쓰이는 현실적인 시나리오
 - MySQL 5.7 기준 문법 사용
+- 모든 텍스트(title, scenario, question, hint)는 반드시 한국어로 작성
 - 샘플 데이터의 이름, 값 등은 영문 또는 숫자만 사용 (한글 데이터 금지)
 - 샘플 데이터는 NULL 값, 경계값, 그룹별 다양한 케이스를 포함하고 예상 출력이 2~5행이 되도록 설계할 것
 - 문제에 'HAVING 사용 금지', 'JOIN 사용 금지' 등 특정 SQL 절 사용을 금지하는 인위적 제약을 넣지 말 것
@@ -268,13 +269,13 @@ async function generateProblem(topic, difficulty, previousIssues = []) {
 반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 
 {
-  "title": "문제 제목",
+  "title": "문제 제목 (한국어)",
   "topic": "${topic}",
   "difficulty": "${difficulty}",
-  "scenario": "문제 배경 설명 (2~3문장)",
+  "scenario": "문제 배경 설명 (2~3문장, 한국어)",
   "schema": "CREATE TABLE 문 (샘플 데이터 INSERT 포함, 5~8행)",
-  "question": "구체적인 문제 요구사항",
-  "hint": "풀이 방향 힌트 (1~2문장)",
+  "question": "[섹션명]\\n1. 조건1\\n2. 조건2\\n\\n[출력 컬럼]\\n- 컬럼1\\n- 컬럼2 형식으로 \\n 줄바꿈을 사용해 가독성 있게 작성 (한국어)",
+  "hint": "풀이 방향 힌트 (1~2문장, 한국어)",
   "answer": "정답 SQL 쿼리 (주석 포함)"
 }`,
       },
@@ -282,6 +283,23 @@ async function generateProblem(topic, difficulty, previousIssues = []) {
   });
 
   return parseJson(message.content[0].text);
+}
+
+function formatQuestion(text) {
+  return text.split('\n').map(line => {
+    const t = line.trim();
+    if (!t) return '<div style="height:8px;"></div>';
+    if (/^\[.+\]$/.test(t)) {
+      return `<div style="font-weight:700;color:#4338ca;margin:14px 0 6px;">${t}</div>`;
+    }
+    if (/^\d+\./.test(t)) {
+      return `<div style="margin:4px 0 4px 8px;">${t}</div>`;
+    }
+    if (/^-\s/.test(t)) {
+      return `<div style="margin:4px 0 4px 8px;">${t}</div>`;
+    }
+    return `<div>${t}</div>`;
+  }).join('');
 }
 
 function buildEmailHtml(problem, dateStr) {
@@ -334,8 +352,8 @@ function buildEmailHtml(problem, dateStr) {
       <!-- 문제 -->
       <div style="margin-bottom:20px;">
         <h3 style="margin:0 0 10px;font-size:14px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">문제</h3>
-        <div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:16px;">
-          <p style="margin:0;color:#1e293b;font-size:15px;line-height:1.7;font-weight:500;">${problem.question}</p>
+        <div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:16px;color:#1e293b;font-size:15px;line-height:1.8;">
+          ${formatQuestion(problem.question)}
         </div>
       </div>
 
