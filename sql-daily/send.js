@@ -12,15 +12,15 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const TOPICS = [
+const SCHEDULE = [
   'SELECT / WHERE / ORDER BY',
   'GROUP BY / HAVING / 집계 함수',
   'INNER JOIN / LEFT JOIN',
   '서브쿼리 (Subquery)',
-  'CTE (WITH 절)',
   'NULL 처리 / COALESCE / CASE WHEN',
-  '윈도우 함수 (ROW_NUMBER, RANK, LAG, LEAD)',
+  'CTE (WITH 절)',
   '날짜 함수 / 문자열 함수',
+  '윈도우 함수 (ROW_NUMBER, RANK, LAG, LEAD)',
 ];
 
 const TOPIC_KEYWORDS = {
@@ -34,7 +34,6 @@ const TOPIC_KEYWORDS = {
   '날짜 함수 / 문자열 함수': 'DATE_FORMAT, DATEDIFF, YEAR/MONTH/DAY, SUBSTRING, CONCAT, REPLACE 등 날짜/문자열 함수가 핵심이어야 함',
 };
 
-const DIFFICULTIES = ['초급', '초급', '중급', '중급', '중급', '고급'];
 
 function getDayIndex() {
   const start = new Date('2026-01-01');
@@ -43,10 +42,9 @@ function getDayIndex() {
 }
 
 function getRotation(dayIndex) {
-  const topic = TOPICS[dayIndex % TOPICS.length];
-  const difficulty = DIFFICULTIES[Math.floor(dayIndex / TOPICS.length) % DIFFICULTIES.length];
-  return { topic, difficulty };
+  return SCHEDULE[dayIndex % SCHEDULE.length];
 }
+
 
 function formatValue(val) {
   if (val === null || val === undefined) return 'NULL';
@@ -181,19 +179,23 @@ async function reviewQuality(problem) {
       content: `아래 SQL 연습 문제를 검토하고 품질을 평가하세요.
 
 주제: ${problem.topic}
-난이도: ${problem.difficulty}
 문제: ${problem.question}
 예상 출력: ${problem.expected_output}
 
 검토 항목:
-1. 난이도 표기가 실제 난이도와 맞는가
-2. 문제 요구사항이 모호하지 않고 명확한가
-3. 예상 출력이 문제 의도와 맞는가
-4. 정답 쿼리의 핵심이 실제로 지정된 주제(${problem.topic})의 함수/절을 사용하는가 (다른 개념이 핵심이면 주제 불일치)
+1. 문제 요구사항이 모호하지 않고 명확한가
+2. 예상 출력이 문제 의도와 맞는가
+3. 정답 쿼리의 핵심이 실제로 지정된 주제(${problem.topic})의 함수/절을 사용하는가 (다른 개념이 핵심이면 주제 불일치)
+
+난이도 판정:
+- 이 문제의 비즈니스 로직 복잡도를 기준으로 초급/중급/고급 중 하나를 판정하세요
+- 초급: 요구사항 1개, 조건 단순, SQL에 직관적으로 매핑
+- 중급: 요구사항 2~3개, 엣지케이스(NULL·경계값·동점 등) 포함
+- 고급: 요구사항이 복잡하게 얽히거나 비즈니스 로직 해석 자체가 까다로움
 
 문제가 없으면 pass=true, issues=[]로 응답하세요.
 문제가 있으면 pass=false, issues에 간단한 한 줄 설명만 넣으세요 (SQL 코드 포함 금지).
-JSON 형식으로만 응답하세요: {"pass": true, "issues": []}`,
+JSON 형식으로만 응답하세요: {"pass": true, "issues": [], "difficulty": "초급"}`,
     }],
   });
 
@@ -201,7 +203,7 @@ JSON 형식으로만 응답하세요: {"pass": true, "issues": []}`,
     return parseJson(message.content[0].text);
   } catch {
     console.warn('품질 검토 응답 파싱 실패, 통과 처리');
-    return { pass: true, issues: [] };
+    return { pass: true, issues: [], difficulty: '중급' };
   }
 }
 
@@ -231,14 +233,14 @@ ${problem.answer}
   return text === 'NONE' ? null : text;
 }
 
-async function generateWithReview(topic, difficulty) {
+async function generateWithReview(topic) {
   const MAX_RETRIES = 3;
   let lastProblem;
   let previousIssues = [];
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     console.log(`문제 생성 중... (시도 ${attempt}/${MAX_RETRIES})`);
-    const problem = await generateProblem(topic, difficulty, previousIssues);
+    const problem = await generateProblem(topic, previousIssues);
     problem.expected_output = await getExpectedOutput(problem);
     lastProblem = problem;
 
@@ -255,7 +257,8 @@ async function generateWithReview(topic, difficulty) {
     const pass = qualityReview.pass && solveReview.pass;
 
     if (pass) {
-      console.log(`리뷰 통과 (시도 ${attempt}회)`);
+      console.log(`리뷰 통과 (시도 ${attempt}회), 난이도 판정: ${qualityReview.difficulty}`);
+      problem.difficulty = qualityReview.difficulty ?? '중급';
       problem.alternative = await generateAlternativeSolution(problem).catch(() => null);
       return problem;
     }
@@ -269,7 +272,7 @@ async function generateWithReview(topic, difficulty) {
   return lastProblem;
 }
 
-async function generateProblem(topic, difficulty, previousIssues = []) {
+async function generateProblem(topic, previousIssues = []) {
   const issueBlock = previousIssues.length > 0
     ? `\n\n이전 시도에서 아래 문제가 발견되었습니다. 반드시 수정해서 생성하세요:\n${previousIssues.map((iss, i) => `${i + 1}. ${iss}`).join('\n')}`
     : '';
@@ -284,9 +287,8 @@ async function generateProblem(topic, difficulty, previousIssues = []) {
 
 조건:
 - 주제: ${topic}
-- 난이도: ${difficulty}
 - 실제 업무에서 자주 쓰이는 현실적인 시나리오
-- MySQL 5.7 기준 문법 사용
+- MySQL 8.0 기준 문법 사용
 - 모든 텍스트(title, scenario, question, hint)는 반드시 한국어로 작성
 - 샘플 데이터의 이름, 값 등은 영문 또는 숫자만 사용 (한글 데이터 금지)
 - 샘플 데이터는 NULL 값, 경계값, 그룹별 다양한 케이스를 포함하고 예상 출력이 2~5행이 되도록 설계할 것
@@ -299,7 +301,6 @@ async function generateProblem(topic, difficulty, previousIssues = []) {
 {
   "title": "문제 제목 (한국어)",
   "topic": "${topic}",
-  "difficulty": "${difficulty}",
   "scenario": "문제 배경 설명 (2~3문장, 한국어)",
   "schema": "CREATE TABLE 문 (샘플 데이터 INSERT 포함, 5~8행)",
   "question": "[섹션명]\\n1. 조건1\\n2. 조건2\\n\\n[출력 컬럼]\\n- 컬럼1\\n- 컬럼2 형식으로 \\n 줄바꿈을 사용해 가독성 있게 작성 (한국어)",
@@ -420,7 +421,7 @@ function buildEmailHtml(problem, dateStr) {
 
     <!-- 푸터 -->
     <div style="border-top:1px solid #f1f5f9;padding:16px 32px;text-align:center;">
-      <p style="margin:0;color:#94a3b8;font-size:12px;">평일 매일 오전 8시에 배송됩니다 · SQL Daily</p>
+      <p style="margin:0;color:#94a3b8;font-size:12px;">SQL Daily</p>
     </div>
 
   </div>
@@ -430,11 +431,11 @@ function buildEmailHtml(problem, dateStr) {
 
 async function main() {
   const dayIndex = getDayIndex();
-  const { topic, difficulty } = getRotation(dayIndex);
+  const topic = getRotation(dayIndex);
 
-  console.log(`주제: ${topic}, 난이도: ${difficulty}`);
+  console.log(`주제: ${topic}`);
 
-  const problem = await generateWithReview(topic, difficulty);
+  const problem = await generateWithReview(topic);
   console.log(`최종 문제: ${problem.title}`);
 
   const today = new Date();
